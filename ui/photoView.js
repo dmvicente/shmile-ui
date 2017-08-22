@@ -14,7 +14,7 @@ var PhotoView = Backbone.View.extend({
     // this.compositeOrigin = null;
     // this.compositeCenter = null;
     this.state = state;
-    this.all = null;
+    // this.all = null;
     this.paper = null;
     // this.totalPictures = 4;
     // this.photoViewLayout = null;
@@ -22,9 +22,21 @@ var PhotoView = Backbone.View.extend({
 
   render: function(template) {
     this.photoViewLayout = new window[template.photoView](this.config);
-    [this.paper, this.all] = this.photoViewLayout.render();
-    this.setOverlay(template.overlayImage);
+    // [this.paper, this.all] = this.photoViewLayout.render();
+    this.paper = this.photoViewLayout.render(function(overlay) {
+      window.p.overlayImage = overlay;
+      window.p.overlayImage.hide();
+    });
 
+
+
+    // this.overlayImage = this.paper.select('#layer3')
+    // this.overlayImage.hide();
+    // FIXME: balh
+    // this.setOverlay(template.overlayImage);
+
+    // this.overlayImage = Snap.select("#layer3")
+    // this.overlayImage.hide();
     // var w = this.config.window_width - this.config.photo_margin;
     // var h = this.config.window_height - this.config.photo_margin;
     // this.compositeDim = CameraUtils.scale4x1(w, h);
@@ -40,7 +52,7 @@ var PhotoView = Backbone.View.extend({
     //
     // r.attr({'fill': 'white'});
     //
-    // this.all.push(r);
+    // this.all.append(r);
     //
     // // Scale the photo padding too
     // this.photoBorder = this.compositeDim.w / 50;
@@ -61,8 +73,8 @@ var PhotoView = Backbone.View.extend({
     //
     // this.images.push(img);
     // this.frames.push(frame);
-    // this.all.push(img);
-    // this.all.push(frame);
+    // this.all.append(img);
+    // this.all.append(frame);
     //
     // for (var i = 0; i < 3; i++) {
     //   frame = frame.clone();
@@ -71,8 +83,8 @@ var PhotoView = Backbone.View.extend({
     //   img.translate(0, this.frameDim.h + this.photoBorder);
     //   this.frames.push(frame);
     //   this.images.push(img);
-    //   this.all.push(frame);
-    //   this.all.push(img);
+    //   this.all.append(frame);
+    //   this.all.append(img);
     // }
     //
     // // // Draw the PNG logo overlay.
@@ -82,15 +94,15 @@ var PhotoView = Backbone.View.extend({
     // //     this.compositeOrigin.y,
     // //     this.compositeDim.w,
     // //     this.compositeDim.h);
-    // // this.all.push(o);
+    // // this.all.append(o);
     // // this.overlayImage = o;
 
     // Hide everything and move out of sight.
     // this.all.hide();
     // this.all.translate(-this.config.window_width, 0);
 
-    this.all.hide();
-    this.all.translate(-this.config.window_width, 0);
+    this.paper.hide();
+    this.paper.transform('T' + -this.config.window_width +',0');
   },
 
   // toString: function() {
@@ -138,19 +150,23 @@ var PhotoView = Backbone.View.extend({
    */
   animate: function(dir, cb) {
     if (dir === 'in') {
-      this.all.show();
+      this.paper.show();
+      // this.all.show();
       // this.all.show();
       // this.images.hide();
       if (this.overlayImage) {
         this.overlayImage.hide();
       }
-      this.all.animate({
-        'translation': this.config.window_width+",0"
-      }, 1000, "<>", cb);
+      this.paper.animate({ transform: 'T0,0'
+        // 'translation': this.config.window_width+",0"
+      }, 1000,
+      // "<>"
+      mina.easeInOut
+      , cb);
     } else if (dir === 'out') {
-      this.all.animate({
-        'translation': this.config.window_width+",0"
-      }, 1000, "<>", cb);
+      this.paper.animate({
+        'transform': 'T'+this.config.window_width+",0"
+      }, 1000, mina.easeInOut, cb);
     }
   },
 
@@ -228,8 +244,8 @@ var PhotoView = Backbone.View.extend({
   slideInNext: function() {
       this.resetState();
       this.modalMessage('Next!');
-      this.all.hide();
-      this.all.translate(-this.config.window_width * 2, 0);
+      // this.all.hide();
+      this.paper.translate(-this.config.window_width * 2, 0);
       this.photoViewLayout.removeImages();
       // this.all.hide();
       // this.all.translate(-this.config.window_width * 2, 0);
@@ -285,7 +301,7 @@ var PhotoView = Backbone.View.extend({
       var sideLength = this.config.window_height * 0.3;
       var x = (this.config.window_width - sideLength)/2;
       var y = (this.config.window_height - sideLength)/2;
-      var all = this.paper.set();
+      var all = this.paper.group();
       var r = this.paper.rect(x, y,
       // var r = this.canvas.rect(x, y,
           sideLength,
@@ -294,25 +310,26 @@ var PhotoView = Backbone.View.extend({
       r.attr({'fill': '#222',
               'fill-opacity': 0.7,
               'stroke-color': 'white'});
-      all.push(r);
+      all.append(r);
       var txt = this.paper.text(x + sideLength/2, y + sideLength/2, text);
       txt.attr({'fill': 'white',
           'font-size': '50',
           'font-weight': 'bold'
       });
-      all.push(txt);
+      all.append(txt);
       all.attr({'opacity': 0});
       all.animate({
           'opacity': 1,
-          'scale': '1.5,1.5',
+          'transform': 's1.5',
           'font-size': '70'
-      }, animateSpeed, '>');
+      }, animateSpeed, mina.easeIn);
 
       // Timer to delete self nodes.
       var t = setTimeout(function(all) {
           // Delete nodes
-          txt.remove();
-          r.remove();
+          // txt.remove();
+          // r.remove();
+          all.remove();
           if (cb) cb();
       }, persistTime, all);
   },
@@ -345,11 +362,11 @@ var PhotoView = Backbone.View.extend({
 
   setOverlay: function(overlayImage) {
     // Draw the PNG logo overlay.
-    var o = this.photoViewLayout.createOverlayImage(overlayImage);
-    if (!this.overlayImage) {
-      this.all.push(o);
+    var o = this.photoViewLayout.createOverlayImage();
+    // if (!this.overlayImage) {
+      // this.paper.append(o);
       // this.all.remove(this.overlayImage);
-    }
+    // }
     o.hide();
     this.overlayImage = o;
   },
