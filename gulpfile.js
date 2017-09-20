@@ -1,9 +1,11 @@
 var gulp = require('gulp');
 var concat = require('gulp-concat');
-// var uglify = require('gulp-uglify');
+var uglify = require('gulp-uglify');
 var sourcemaps = require('gulp-sourcemaps');
 var rename = require('gulp-rename');
 var del = require('del');
+var gutil = require('gulp-util')
+
 
 var paths = {
   scripts: [
@@ -21,7 +23,8 @@ var paths = {
     'ui/portraitOneByFour.js',
     'ui/landscapeTwoByTwo.js',
     'ui/LandscapeOneByThree.js',
-    'ui/snapOneByFour.js'
+    'ui/snapOneByFour.js',
+    'ui/stripOneByThree.js'
   ],
   styles: [
     "css/shmile.css",
@@ -47,7 +50,10 @@ gulp.task('scripts', ['clean'], function() {
     .pipe(concat('shmile-ui.js'))
     .pipe(gulp.dest('build/js'))
     .pipe(sourcemaps.init())
-    // .pipe(uglify())
+    // .pipe(uglify().on('error', function(err) {
+    //   gutil.log(gutil.colors.red('[Error]'), err.toString());
+    //   this.emit('end');
+    //   }))
     .pipe(sourcemaps.write("../maps"))
     .pipe(rename({extname: ".min.js"}))
     .pipe(gulp.dest('build/js'));
