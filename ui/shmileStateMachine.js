@@ -33,15 +33,22 @@ var ShmileStateMachine = function(photoView, socket, appState, config, buttonVie
   this.buttonPrint = null;
   this.shouldSendNotPrinting = false;
 
-  self.socket.on("printer_enabled", () => {
-    console.log("socket printer_enabled received");
-      self.shouldSendNotPrinting = true;
-      self.fsm.show_print_message();
-      // FIXME: consider a bigger timeout here?
-      self.buttonPrint = setTimeout(function(){
-        // alert("Hello");
-        self.fsm.show_message();
-      }, self.config.next_delay);
+  self.socket.on("printer_enabled", function(optionalPrinting){
+    console.log("socket printer_enabled received, optionalPrinting is #{optionalPrinting}");
+      if (optionalPrinting) {
+        self.shouldSendNotPrinting = true;
+        self.fsm.show_print_message();
+        // FIXME: consider a bigger timeout here?
+        self.buttonPrint = setTimeout(function(){
+          // alert("Hello");
+          self.fsm.show_message();
+        }, self.config.next_delay);
+      } else {
+        self.socket.emit('print');
+        setTimeout(function(){
+          self.fsm.print_set();
+        }, self.config.next_delay);
+      }
   });
   self.socket.on("review_composited", () => {
     setTimeout(function() {
@@ -64,7 +71,7 @@ var ShmileStateMachine = function(photoView, socket, appState, config, buttonVie
       { name: 'continue_partial_set', from: 'next_photo', to: 'waiting_for_photo' },
       { name: 'finish_set', from: 'next_photo', to: 'review_composited' },
       { name: 'show_print_message', from: 'review_composited', to: 'print_message' },
-      { name: 'print_set', from: 'print_message', to: 'printing'},
+      { name: 'print_set', from: ['print_message', 'review_composited'], to: 'printing'},
       // { name: 'print_ok', from: 'printing', to: 'ready'},
       { name: 'print_not_ok', from: 'printing', to: 'show_error_message'},
       { name: 'show_message', from: ['review_composited', 'print_message', 'printing', 'show_error_message'], to: 'show_goodbye_message'},
