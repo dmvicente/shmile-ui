@@ -68,3 +68,15 @@ CameraUtils.scale3x8 = function(maxw, maxh) {
         return {w: maxw, h: maxw * (1/s0)}
     }
 }
+
+CameraUtils.scale = function(maxw, maxh, s0) {
+    // var s0 = 8/3; // width / height
+    var s1 = maxw/maxh;
+
+    // Then the width is longer. Use the shorter side (height)
+    if (s0 <= s1) {
+        return {w: maxh * s0, h: maxh};
+    } else {
+        return {w: maxw, h: maxw * (1/s0)}
+    }
+}
