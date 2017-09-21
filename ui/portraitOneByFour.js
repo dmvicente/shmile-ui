@@ -184,10 +184,6 @@ PortraitOneByFour.prototype.toString = function() {
   }
 
 PortraitOneByFour.prototype.removeImages = function () {
-  // this.images.clear();
-  for (var i = 0; i < this.totalPictures; i++) {
-    this.images.pop();
-  }
   this.images.hide();
   this.frames.show();
 }
