@@ -3,26 +3,56 @@ var PhotoView = Backbone.View.extend({
 
   initialize: function(config, state) {
     this.config = config;
-    // this.canvas = new Raphael('viewport', this.config.window_width, this.config.window_height);
-    // this.frames = this.canvas.set(); // List of SVG black rects
-    // this.images = this.canvas.set(); // List of SVG images
-    // this.all = this.canvas.set();
+    this.paper = new Raphael('viewport', this.config.window_width, this.config.window_height);
+    this.frames = this.paper.set(); // List of SVG black rects
+    this.images = this.paper.set(); // List of SVG images
+    this.all = this.paper.set();
     this.overlayImage = null;
     // this.photoBorder = 0;
-    // this.compositeDim = null;
+    this.compositeDim = null;
     // this.frameDim = null;
-    // this.compositeOrigin = null;
-    // this.compositeCenter = null;
+    this.compositeOrigin = null;
+    this.compositeCenter = null;
     this.state = state;
-    this.all = null;
-    this.paper = null;
+    // this.all = null;
+    // this.paper = null;
     // this.totalPictures = 4;
     // this.photoViewLayout = null;
   },
 
   render: function(template) {
+    this.translationTotal = {dx:0, dy:0};
     this.photoViewLayout = new window[template.photoView](this.config);
-    [this.paper, this.all] = this.photoViewLayout.render();
+
+    var w = this.config.window_width - this.config.photo_margin;
+    var h = this.config.window_height - this.config.photo_margin;
+
+    this.compositeDim = CameraUtils.scale(w, h, this.photoViewLayout.finalSizeRatio);
+    this.compositeOrigin = {
+      x: (this.config.window_width - this.compositeDim.w) / 2,
+      y: (this.config.window_height - this.compositeDim.h) / 2
+    };
+    this.compositeCenter = {
+      x: this.compositeOrigin.x + (this.compositeDim.w/2),
+      y: this.compositeOrigin.y + (this.compositeDim.h/2)
+    }
+    var r = this.paper.rect(this.compositeOrigin.x, this.compositeOrigin.y, this.compositeDim.w, this.compositeDim.h);
+
+    r.attr({'fill': 'white'});
+
+    this.all.push(r);
+
+    var stuff = {
+      "compositeDim": this.compositeDim,
+      "paper": this.paper,
+      "compositeOrigin": this.compositeOrigin,
+      "frames": this.frames,
+      "images": this.images,
+      "all": this.all
+    };
+
+    this.frameDim = this.photoViewLayout.render(stuff);
+    // [this.paper, this.all] = this.photoViewLayout.render();
     this.setOverlay(template.overlayImage);
 
     // var w = this.config.window_width - this.config.photo_margin;
@@ -93,14 +123,14 @@ var PhotoView = Backbone.View.extend({
     this.all.translate(-this.config.window_width, 0);
   },
 
-  // toString: function() {
-  //   ret = [];
-  //   ret.push("Size of 'all' set: " + this.all.length);
-  //   ret.push("Size of 'frames' set: " + this.frames.length);
-  //   ret.push("Composite photo is: " + this.all[0].attr('width') + 'x' + this.all[0].attr('height'));
-  //   ret.push("Frame photo is: " + this.frameDim.w + 'x' + this.frameDim.h);
-  //   return ret.join('\n');
-  // },
+  toString: function() {
+    ret = [];
+    ret.push("Size of 'all' set: " + this.all.length);
+    ret.push("Size of 'frames' set: " + this.frames.length);
+    ret.push("Composite photo is: " + this.all[0].attr('width') + 'x' + this.all[0].attr('height'));
+    ret.push("Frame photo is: " + this.frameDim.w + 'x' + this.frameDim.h);
+    return ret.join('\n');
+  },
 
   /**
    * Updates the image at the set location.
@@ -112,12 +142,12 @@ var PhotoView = Backbone.View.extend({
    *   The callback to be executed when the UI has finished updating and zooming out.
    */
   updatePhotoSet: function(img_src, idx, cb) {
-    // var view = this;
-    // var imgEl = view.images[idx];
-    // var frameEl = view.frames[idx];
+    var view = this;
+    var imgEl = view.images[idx];
+    var frameEl = view.frames[idx];
 
     console.log("idx = " + idx);
-    var [imgEl, frameEl] = this.photoViewLayout.updatePhotoSet(img_src, idx);
+    // var [imgEl, frameEl] = this.photoViewLayout.updatePhotoSet(img_src, idx);
 
 
     imgEl.attr({'src': img_src, 'opacity': 0});
@@ -169,11 +199,66 @@ var PhotoView = Backbone.View.extend({
    * Depends on the presence of the .zoomed object to store zoom info.
    */
    // FIXME: thsi should be a general method
-  zoomFrame: function(idx, dir, onFinish) {
+  zoomFrame: function(idx, dir, onfinish) {
     if ((dir === "out" && this.state.zoomed) ||
         (dir === "in" && !this.state.zoomed)) {
-      this.state.zoomed = this.photoViewLayout.zoomFrame(idx, dir, this.state, onFinish);
-    }
+      // this.state.zoomed = this.photoViewLayout.zoomFrame(idx, dir, this.state, onFinish);
+      // LandscapeOneByThree.prototype.zoomFrame = function(idx, dir, state, onfinish) {
+        var view = this;
+        // var composite = this.all[idx];
+
+        var frame = this.frames[idx];
+        var frameX = frame.attr('x');
+        var frameW = frame.attr('width');
+        var frameY = frame.attr('y');
+        var frameH = frame.attr('height');
+        var centerX = frameX + frameW/2;
+        var centerY = frameY + frameH/2;
+
+        var animSpeed = 1000;
+
+        // delta to translate to.
+        var dx = this.compositeCenter.x - centerX;
+        var dy = this.compositeCenter.y - centerY;
+
+
+        if (dir === "out" && this.state.zoomed) {
+          // scaleFactor = 1;
+          view.translationTotal.dx -= this.state.zoomed.dx;
+          view.translationTotal.dy -= this.state.zoomed.dy;
+          view.all.animate({
+            'scale': [1, 1, view.compositeCenter.x, view.compositeCenter.y].join(','),
+          }, animSpeed, 'bounce', //onFinish);
+          function() {
+            if (idx == view.photoViewLayout.totalPictures - 1) {
+              view.all.animate({
+                'translation': view.translationTotal.dx+','+view.translationTotal.dy
+              }, animSpeed, '<>', onfinish)
+            } else {
+              onfinish();
+            }
+          });
+          this.state.zoomed = null;
+        } else if (dir !== "out") {
+          var scaleFactor = this.compositeDim.h / frameH;
+          view.all.animate({
+            'translation': dx+','+dy
+          }, animSpeed, '<>', function() {
+            view.all.animate({
+              'scale': [scaleFactor, scaleFactor, view.compositeCenter.x, view.compositeCenter.y].join(','),
+            }, animSpeed, 'bounce', onfinish)
+          });
+          // Store the zoom data for next zoom.
+          this.state.zoomed =  {
+            dx: dx,
+            dy: dy
+            // scaleFactor: scaleFactor
+          };
+        }
+      }
+
+
+    // }
       // var view = this;
       // var composite = this.all[idx];
       //
@@ -222,6 +307,27 @@ var PhotoView = Backbone.View.extend({
       // }
   },
 
+  calculateOutTranslation: function(idx, state, onfinish) {
+    var view = this;
+    var animSpeed = 1000;
+
+    if (view.shouldRestoreOutState) {
+      view.all.animate({
+        'translation': [-state.dx, -state.dy].join(',')
+      }, animSpeed, '<>', onfinish);
+    } else {
+      view.translationTotal.dx -= state.zoomed.dx;
+      view.translationTotal.dy -= state.zoomed.dy;
+      if (idx == view.totalPictures - 1) {
+        view.all.animate({
+          'translation': view.translationTotal.dx+','+view.translationTotal.dy
+        }, animSpeed, '<>', onfinish);
+      } else {
+        onfinish();
+      }
+    };
+  },
+
   /**
    * Reset visibility, location of composite image for next round.
    */
@@ -229,7 +335,15 @@ var PhotoView = Backbone.View.extend({
       this.resetState();
       this.modalMessage('Next!');
       // this.all.hide();
-      this.photoViewLayout.removeImages();
+      // this.photoViewLayout.removeImages();
+      // StripOneByThree.prototype.removeImages = function () {
+      this.images.hide();
+      this.frames.show();
+
+      this.translationTotal.dx = 0;
+      this.translationTotal.dy = 0;
+
+      // }
       this.all.translate(-this.config.window_width * 2, 0);
       // this.all.hide();
       // this.all.translate(-this.config.window_width * 2, 0);
@@ -345,7 +459,13 @@ var PhotoView = Backbone.View.extend({
 
   setOverlay: function(overlayImage) {
     // Draw the PNG logo overlay.
-    var o = this.photoViewLayout.createOverlayImage(overlayImage);
+    var o = this.paper.image(
+      overlayImage,
+      this.compositeOrigin.x,
+      this.compositeOrigin.y,
+      this.compositeDim.w,
+      this.compositeDim.h)
+    // var o = this.photoViewLayout.createOverlayImage(overlayImage);
     if (!this.overlayImage) {
       this.all.push(o);
       // this.all.remove(this.overlayImage);
@@ -358,12 +478,5 @@ var PhotoView = Backbone.View.extend({
     return this.photoViewLayout.totalPictures;
   },
 
-  // setPicturesTotal: function(totalPictures) {
-  //   this.totalPictures = totalPictures;
-  // },
-
-  // setLayout: function(photoViewLayout) {
-  //   this.photoViewLayout = photoViewLayout;
-  // }
 
 });
