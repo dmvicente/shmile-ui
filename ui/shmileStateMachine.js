@@ -34,7 +34,7 @@ var ShmileStateMachine = function(photoView, socket, appState, config, buttonVie
   this.shouldSendNotPrinting = false;
 
   self.socket.on("printer_enabled", function(optionalPrinting){
-    console.log("socket printer_enabled received, optionalPrinting is #{optionalPrinting}");
+    console.log("socket printer_enabled received, optionalPrinting is" + optionalPrinting);
       if (optionalPrinting) {
         self.shouldSendNotPrinting = true;
         self.fsm.show_print_message();
@@ -56,9 +56,7 @@ var ShmileStateMachine = function(photoView, socket, appState, config, buttonVie
     }, self.config.next_delay);
   });
   self.socket.on("print", () => {
-    // setTimeout(function() {
     self.fsm.print_set();
-    // }, self.config.next_delay);
   });
 
   this.fsm = StateMachine.create({
@@ -125,11 +123,9 @@ var ShmileStateMachine = function(photoView, socket, appState, config, buttonVie
         self.socket.emit('composite');
         self.photoView.showOverlay(true);
       },
-      // FIXME: onenter_printing_set
       onenterprinting: function(e, f, t) {
         clearTimeout(self.buttonPrint);
         self.shouldSendNotPrinting = false;
-        // self.socket.emit('print');
         setTimeout(function() {
           self.fsm.show_message();
         }, self.config.between_snap_delay);
@@ -144,13 +140,7 @@ var ShmileStateMachine = function(photoView, socket, appState, config, buttonVie
       },
       onenterprint_message: function(e, f, t) {
         self.snackbar.showMe();
-        // setTimeout(function() {
-        //   self.fsm.print_set();
-        // }, 2000)
       },
-      // onenterprinting: function(e, f, t) {
-      //
-      // },
       onleaveshow_goodbye_message: function(e, f, t) {
         // Clean up
         self.photoView.animate('out');
