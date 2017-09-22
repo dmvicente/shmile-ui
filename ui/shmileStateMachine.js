@@ -50,12 +50,12 @@ var ShmileStateMachine = function(photoView, socket, appState, config, buttonVie
         }, self.config.next_delay);
       }
   });
-  self.socket.on("review_composited", () => {
+  self.socket.on("review_composited", function() {
     setTimeout(function() {
       self.fsm.show_message()
     }, self.config.next_delay);
   });
-  self.socket.on("print", () => {
+  self.socket.on("print", function() {
     self.fsm.print_set();
   });
 

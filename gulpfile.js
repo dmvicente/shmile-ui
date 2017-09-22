@@ -50,10 +50,10 @@ gulp.task('scripts', ['clean'], function() {
     .pipe(concat('shmile-ui.js'))
     .pipe(gulp.dest('build/js'))
     .pipe(sourcemaps.init())
-    // .pipe(uglify().on('error', function(err) {
-    //   gutil.log(gutil.colors.red('[Error]'), err.toString());
-    //   this.emit('end');
-    //   }))
+    .pipe(uglify().on('error', function(err) {
+      gutil.log(gutil.colors.red('[Error]'), err.toString());
+      this.emit('end');
+      }))
     .pipe(sourcemaps.write("../maps"))
     .pipe(rename({extname: ".min.js"}))
     .pipe(gulp.dest('build/js'));
